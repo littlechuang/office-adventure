@@ -1435,6 +1435,57 @@ var G = {
 
 var SAVE_KEY = 'office-adventure-v1';
 
+/* ----------------------------------------------------------------
+   BROWSER HISTORY (back/forward support)
+   ---------------------------------------------------------------- */
+var historyReady = false; // set true after initial load
+
+function pushHistory(view, room) {
+  if (!historyReady) return;
+  var hash = view === 'room' && room ? '#room=' + encodeURIComponent(room) : '#' + view;
+  if (location.hash !== hash) {
+    history.pushState({ view: view, room: room || null }, '', hash);
+  }
+}
+
+function handlePopState(e) {
+  var state = e.state;
+  if (!state) {
+    // No state = back to welcome
+    showWelcomeFromHistory();
+    return;
+  }
+  if (state.view === 'home') {
+    showWelcomeFromHistory();
+  } else if (state.view === 'room' && state.room && G.roomMap[state.room]) {
+    // Navigate to room without transition animation or logging
+    G.cur = state.room;
+    $('welcome-screen').classList.add('hidden');
+    $('game-screen').classList.add('active');
+    $('journal-overlay').classList.remove('active');
+    $('map-overlay').classList.remove('active');
+    renderRoom();
+    updateProgress();
+    renderMinimap();
+  }
+}
+
+function showWelcomeFromHistory() {
+  stopDust();
+  $('game-screen').classList.remove('active');
+  $('journal-overlay').classList.remove('active');
+  $('map-overlay').classList.remove('active');
+  $('welcome-screen').classList.remove('hidden');
+  var visitCount = Object.keys(G.visited).length;
+  if (visitCount > 0) {
+    var continueBtn = $('btn-continue');
+    continueBtn.textContent = '\u7E7C\u7E8C\u63A2\u96AA (\u5DF2\u63A2\u7D22 ' + visitCount + ' \u500B\u5834\u666F)';
+    continueBtn.classList.remove('hidden');
+    $('btn-welcome-reset').classList.remove('hidden');
+  }
+  initDust();
+}
+
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -2670,6 +2721,7 @@ function navigateTo(filename, direction) {
     renderRoom();
     updateProgress();
     renderMinimap();
+    pushHistory('room', filename);
 
     // Check for hidden character (collect on room entry)
     setTimeout(function () { checkRoomChar(filename); }, 600);
@@ -2696,6 +2748,7 @@ function enterRoom(filename) {
   renderRoom();
   updateProgress();
   renderMinimap();
+  pushHistory('room', filename);
 
   // Check if this room has a hidden character (collect on entry)
   setTimeout(function () { checkRoomChar(filename); }, 600);
@@ -2963,6 +3016,7 @@ function bindEvents() {
     renderRoom();
     updateProgress();
     renderMinimap();
+    pushHistory('room', G.cur);
   });
 
   // Journal button
@@ -3015,6 +3069,7 @@ function bindEvents() {
     continueBtn.textContent = '\u7E7C\u7E8C\u63A2\u96AA (\u5DF2\u63A2\u7D22 ' + visitCount + ' \u500B\u5834\u666F)';
     continueBtn.classList.remove('hidden');
     $('btn-welcome-reset').classList.remove('hidden');
+    pushHistory('home');
     initDust();
   });
 }
@@ -3023,6 +3078,9 @@ function bindEvents() {
    INIT -- Load rooms and start
    ---------------------------------------------------------------- */
 function init() {
+  // Browser back/forward support
+  window.addEventListener('popstate', handlePopState);
+
   // Check for verify mode
   var urlParams = new URLSearchParams(window.location.search);
   var verifyCode = urlParams.get('verify');
@@ -3128,6 +3186,10 @@ function init() {
 
         // Start dust particles
         initDust();
+
+        // Enable browser history after init
+        historyReady = true;
+        history.replaceState({ view: 'home' }, '', '#home');
       });
     })
     .catch(function (err) {

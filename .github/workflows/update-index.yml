@@ -1,13 +1,11 @@
-name: Update contributors index
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'contributors/**'
 
 jobs:
-  update-index:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,15 +17,21 @@ jobs:
           cd contributors
           ls -1 *.md | grep -v '^_' | grep -v '^index.md' | sort > index.md
 
-      - name: Commit if changed
+      - name: Deploy to gh-pages branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add contributors/index.md
-          if git diff --cached --quiet; then
-            echo "No changes to index.md"
-          else
-            git commit -m "chore: auto-update contributors index"
-            git pull --rebase
-            git push
-          fi
+
+          # Create a clean gh-pages deploy
+          mkdir -p /tmp/deploy
+          cp index.html /tmp/deploy/
+          cp -r contributors /tmp/deploy/
+          cp LICENSE /tmp/deploy/ 2>/dev/null || true
+
+          # Switch to gh-pages branch (create if needed)
+          git checkout --orphan gh-pages-tmp
+          git rm -rf .
+          cp -r /tmp/deploy/* .
+          git add -A
+          git commit -m "deploy: auto-generated from main"
+          git push origin HEAD:gh-pages --force

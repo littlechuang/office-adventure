@@ -102,9 +102,10 @@
 
 ## 部署
 
-1. 在 GitHub repo 的 Settings > Pages
-2. Source 選 **Deploy from a branch**
-3. Branch 選 `main`，資料夾選 `/ (root)`
+已設定好 GitHub Actions 自動部署：
+- 合併 PR 到 `main` → Actions 自動生成 `index.md` 並部署到 `gh-pages` branch
+- GitHub Pages 從 `gh-pages` branch 提供服務
+- `main` branch 保持乾淨，不含自動生成的檔案
 4. 儲存後等 1-2 分鐘，網站就上線了
 
 管理者模式：在網址後加 `?admin` 可以查看完整的場景地圖配置。
